@@ -13,10 +13,11 @@ from torchvision.transforms import ToTensor, Lambda
 
 class TankPics(Dataset):
 
-	def __init__(self, img_dir, label_map: dict=None, transform=None, target_transform=None):
+	def __init__(self, img_dir, label_map: dict=None, train=True, transform=None, target_transform=None):
 		
 		self.img_dir = img_dir
 		self.label_to_int = label_map
+		self.train = train
 		self.transform = transform
 		self.target_transform = target_transform
 
@@ -43,6 +44,21 @@ class TankPics(Dataset):
 			
 			self.file_names.extend(files)
 
+		# TO-DO: Better way to do this? Move pics to different directories?
+		# This is really ugly...
+		for file in reversed(self.file_names):
+			
+			suffix = file.split('Deg_0', 1)[1]	# Get second half of split
+			degree = int(suffix.split('_', 1)[0])	# Get first half of split as integer
+
+			if self.train and degree > 16:
+
+				self.file_names.remove(file)
+
+			elif not self.train and degree < 17:
+
+				self.file_names.remove(file)
+
 
 	def __len__(self):
 		
@@ -68,6 +84,10 @@ class TankPics(Dataset):
 		return image, label
 
 
+target_transform = Lambda(
+	lambda y: torch.zeros(10, dtype=torch.float).scatter_(dim=0, index=torch.tensor(y), value=1)
+)
+
 label_map = {
 	'2s1': 0,
 	'bmp2': 1,
@@ -81,21 +101,28 @@ label_map = {
 	'zsu23': 9,
 }
 
-tanks = TankPics(
-	img_dir='qpm\\data',
+images_dir = 'qpm\\data'
+
+training_data = TankPics(
+	img_dir=images_dir,
 	label_map=label_map,
+	train=True,
 	transform=ToTensor(),
-	target_transform=Lambda(
-		lambda y: torch.zeros(10, dtype=torch.float).scatter_(dim=0, index=torch.tensor(y), value=1)
-	),
+	target_transform=target_transform,
 )
 
-# tank_feature, tank_label = tanks[750]
+test_data = TankPics(
+	img_dir=images_dir,
+	label_map=label_map,
+	train=False,
+	transform=ToTensor(),
+	target_transform=target_transform,
+)
+
+# tank_feature, tank_label = tanks[0]
 
 # plt.imshow(tank_feature.squeeze(), cmap='gray')
 # plt.show()
 # print(f'Label: {tank_label}')
-
-# TO-DO: Write target_transform!
 
 print('\n========== DONE ==========\n')

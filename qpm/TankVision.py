@@ -102,6 +102,7 @@ label_map = {
 }
 
 images_dir = 'qpm\\data'
+batch_size = 64
 
 training_data = TankPics(
 	img_dir=images_dir,
@@ -118,6 +119,9 @@ test_data = TankPics(
 	transform=ToTensor(),
 	target_transform=target_transform,
 )
+
+train_dataloader = DataLoader(training_data, batch_size, shuffle=True)
+test_dataloader = DataLoader(test_data, batch_size, shuffle=True)
 
 # tank_feature, tank_label = tanks[0]
 

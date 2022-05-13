@@ -5,7 +5,10 @@ import matplotlib.pyplot as plt
 
 from skimage import io
 
+import time
+
 import torch
+from torch import nn
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
 
@@ -45,7 +48,7 @@ class TankPics(Dataset):
 			self.file_names.extend(files)
 
 		# TO-DO: Better way to do this? Move pics to different directories?
-		# This is really ugly...
+		# This is really ugly, but it's only done when the data is initially loaded, so...
 		for file in reversed(self.file_names):
 			
 			suffix = file.split('Deg_0', 1)[1]	# Get second half of split
@@ -84,6 +87,31 @@ class TankPics(Dataset):
 		return image, label
 
 
+class TankNet(nn.Module):
+
+	def __init__(self, in_features=128*128, out_features=10):
+
+		super(TankNet, self).__init__()
+		self.in_features = in_features
+		self.hidden1 = 1024
+		self.hidden2 = 512
+		self.out_features = out_features
+
+		self.network_stack = nn.Sequential(
+			nn.Flatten(),
+			nn.Linear(self.in_features, self.hidden1),
+			nn.ReLU(),
+			nn.Linear(self.hidden1, self.hidden2),
+			nn.ReLU(),
+			nn.Linear(self.hidden2, self.out_features),
+			nn.Softmax(dim=1)
+		)
+
+	def forward(self, x):
+		
+		return self.network_stack(x)
+
+
 target_transform = Lambda(
 	lambda y: torch.zeros(10, dtype=torch.float).scatter_(dim=0, index=torch.tensor(y), value=1)
 )
@@ -101,11 +129,14 @@ label_map = {
 	'zsu23': 9,
 }
 
-images_dir = 'qpm\\data'
-batch_size = 64
+images_root_dir = 'qpm\\data'
+
+# Load data
+print('Loading data... ', end='')
+data_load_start = time.time()
 
 training_data = TankPics(
-	img_dir=images_dir,
+	img_dir=images_root_dir,
 	label_map=label_map,
 	train=True,
 	transform=ToTensor(),
@@ -113,15 +144,33 @@ training_data = TankPics(
 )
 
 test_data = TankPics(
-	img_dir=images_dir,
+	img_dir=images_root_dir,
 	label_map=label_map,
 	train=False,
 	transform=ToTensor(),
 	target_transform=target_transform,
 )
 
+data_load_finish = time.time()
+print('%.3f s' % (data_load_finish - data_load_start))
+
+# Hyperparameters
+batch_size = 64
+learning_rate = 1e-3
+epochs = 5
+loss_fn = nn.CrossEntropyLoss()
+
+# Dataloaders
 train_dataloader = DataLoader(training_data, batch_size, shuffle=True)
 test_dataloader = DataLoader(test_data, batch_size, shuffle=True)
+
+# Device settings
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
+print(f'Using device: {device}')
+
+model = TankNet().to(device)
+# Need to send model to device before initializing optimizer
+optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
 # tank_feature, tank_label = tanks[0]
 

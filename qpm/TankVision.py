@@ -1,5 +1,7 @@
 from ast import Lambda
+import enum
 import os
+from unittest import TestLoader
 
 import matplotlib.pyplot as plt
 
@@ -112,6 +114,49 @@ class TankNet(nn.Module):
 		return self.network_stack(x)
 
 
+def train_loop(dataloader: DataLoader, model, loss_fn, optimizer, device):
+	
+	size = len(dataloader.dataset)
+	for batch, (x, y) in enumerate(dataloader):
+
+		x, y = x.to(device), y.to(device)
+
+		# Compute model's prediction and loss
+		pred = model(x)
+		loss = loss_fn(pred, y)
+
+		# Backpropagation
+		optimizer.zero_grad()
+		loss.backward()
+		optimizer.step()
+
+		if batch % 8 == 0:
+
+			loss, current = loss.item(), batch * len(x)
+			print(f'Loss: {loss:.4f}\t[{current}/{size}]')
+
+
+def test_loop(dataloader: DataLoader, model, loss_fn, device):
+	
+	size = len(dataloader.dataset)
+	num_batches = len(dataloader)
+	test_loss, correct = 0, 0
+
+	with torch.no_grad():
+		for x, y in dataloader:
+
+			x, y = x.to(device), y.to(device)
+
+			pred = model(x)
+			test_loss += loss_fn(pred, y).item()
+			# correct += (pred.argmax(1) == y).type(torch.float).sum().item()
+
+	test_loss /= num_batches
+	correct /= size
+	print(f'Test results:\n  Accuracy: {(100*correct):.2f}%')
+	print(f'  Avg loss: {test_loss:4f}\n')
+
+
 target_transform = Lambda(
 	lambda y: torch.zeros(10, dtype=torch.float).scatter_(dim=0, index=torch.tensor(y), value=1)
 )
@@ -157,11 +202,11 @@ print('%.3f s' % (data_load_finish - data_load_start))
 # Hyperparameters
 batch_size = 64
 learning_rate = 1e-3
-epochs = 5
+epochs = 15
 loss_fn = nn.CrossEntropyLoss()
 
 # Dataloaders
-train_dataloader = DataLoader(training_data, batch_size, shuffle=True)
+train_dataloader = DataLoader(training_data, batch_size, shuffle=False)
 test_dataloader = DataLoader(test_data, batch_size, shuffle=True)
 
 # Device settings
@@ -171,6 +216,12 @@ print(f'Using device: {device}')
 model = TankNet().to(device)
 # Need to send model to device before initializing optimizer
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+
+for epoch in range(epochs):
+
+	print(f'Epoch: {epoch + 1}')
+	train_loop(train_dataloader, model, loss_fn, optimizer, device)
+	test_loop(test_dataloader, model, loss_fn, device)
 
 # tank_feature, tank_label = tanks[0]
 

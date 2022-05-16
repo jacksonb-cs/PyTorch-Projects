@@ -61,12 +61,11 @@ class TankPics(Dataset):
 
 				self.file_names.remove(file)
 
-
 	def __len__(self):
 		
 		return len(self.file_names)
 
-
+	# TO-DO: Preferable to return scalar label or one-hot tensor?
 	def __getitem__(self, index):
 		
 		file_name = self.file_names[index]
@@ -127,7 +126,7 @@ def train_loop(dataloader: DataLoader, model, loss_fn, optimizer, device):
 		loss.backward()
 		optimizer.step()
 
-		if batch % 8 == 0:
+		if batch % 5 == 0:
 
 			loss, current = loss.item(), batch * len(x)
 			print(f'Loss: {loss:.4f}\t[{current}/{size}]')
@@ -146,13 +145,11 @@ def test_loop(dataloader: DataLoader, model, loss_fn, device):
 
 			pred = model(x)
 			test_loss += loss_fn(pred, y).item()
-			# TO-DO: Error here, and I don't know what is going on with this
-			# correct += (pred.argmax(1) == y).type(torch.float).sum().item()
+			correct += (pred.argmax(1) == y.argmax(1)).type(torch.float).sum().item()
 
 	test_loss /= num_batches
 	correct /= size
-	print(f'Test results:\n  Accuracy: {(100*correct):.2f}%')
-	print(f'  Avg loss: {test_loss:4f}\n')
+	print(f'Test results:\n  Accuracy: {(100*correct):.2f}%, Avg loss: {test_loss:.4f}\n')
 
 
 target_transform = Lambda(
@@ -217,7 +214,7 @@ optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
 for epoch in range(epochs):
 
-	print(f'Epoch: {epoch + 1}')
+	print(f'Epoch {epoch + 1}\n-------------------------------')
 	train_loop(train_dataloader, model, loss_fn, optimizer, device)
 	test_loop(test_dataloader, model, loss_fn, device)
 

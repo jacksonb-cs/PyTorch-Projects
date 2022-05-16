@@ -7,7 +7,8 @@ from skimage import io
 import time
 
 import torch
-from torch import nn
+import torch.nn as nn
+import torch.nn.functional as F
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
 
@@ -87,27 +88,31 @@ class TankPics(Dataset):
 
 class TankNet(nn.Module):
 
-	def __init__(self, in_features=128*128, out_features=10):
+	def __init__(self):
 
 		super(TankNet, self).__init__()
-		self.in_features = in_features
-		self.hidden1 = 1024
-		self.hidden2 = 512
-		self.out_features = out_features
 
-		self.network_stack = nn.Sequential(
-			nn.Flatten(),
-			nn.Linear(self.in_features, self.hidden1),
-			nn.ReLU(),
-			nn.Linear(self.hidden1, self.hidden2),
-			nn.ReLU(),
-			nn.Linear(self.hidden2, self.out_features),
-			nn.Softmax(dim=1)
-		)
+		feature_width = 128
+		mask_width = 5
+		post_conv_width = (feature_width - mask_width + 1) / 2
+		post_conv_width = (post_conv_width - mask_width + 1) / 2
+
+		self.conv1 = nn.Conv2d(1, 6, mask_width)
+		self.conv2 = nn.Conv2d(6, 16, mask_width)
+		self.fc1 = nn.Linear(16 * post_conv_width * post_conv_width, 120)
+		self.fc2 = nn.Linear(120, 84)
+		self.fc3 = nn.Linear(84, 10)
 
 	def forward(self, x):
 		
-		return self.network_stack(x)
+		# Convolution and pooling layers
+		x = F.max_pool2d(F.relu(self.conv1(x)), 2)
+		x = F.max_pool2d(F.relu(self.conv2(x)), 2)
+
+		x = torch.flatten(x, 1)	# This flattens all dimensions except the first (batch dimension)
+		x = F.relu(self.fc1(x))
+		x = F.relu(self.fc2(x))
+		return self.fc3(x)
 
 
 def train_loop(dataloader: DataLoader, model, loss_fn, optimizer, device):

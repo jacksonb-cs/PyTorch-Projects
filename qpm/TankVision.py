@@ -1,7 +1,4 @@
-from ast import Lambda
-import enum
 import os
-from unittest import TestLoader
 
 import matplotlib.pyplot as plt
 
@@ -202,8 +199,8 @@ print('%.3f s' % (data_load_finish - data_load_start))
 
 # Hyperparameters
 batch_size = 64
-learning_rate = 1e-3
-epochs = 15
+learning_rate = 2e-3
+epochs = 25
 loss_fn = nn.CrossEntropyLoss()
 
 # Dataloaders

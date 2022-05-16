@@ -149,6 +149,7 @@ def test_loop(dataloader: DataLoader, model, loss_fn, device):
 
 			pred = model(x)
 			test_loss += loss_fn(pred, y).item()
+			# TO-DO: Error here, and I don't know what is going on with this
 			# correct += (pred.argmax(1) == y).type(torch.float).sum().item()
 
 	test_loss /= num_batches
@@ -206,15 +207,15 @@ epochs = 15
 loss_fn = nn.CrossEntropyLoss()
 
 # Dataloaders
-train_dataloader = DataLoader(training_data, batch_size, shuffle=False)
+train_dataloader = DataLoader(training_data, batch_size, shuffle=True)
 test_dataloader = DataLoader(test_data, batch_size, shuffle=True)
 
 # Device settings
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 print(f'Using device: {device}')
 
-model = TankNet().to(device)
 # Need to send model to device before initializing optimizer
+model = TankNet().to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
 for epoch in range(epochs):

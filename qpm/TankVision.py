@@ -86,6 +86,60 @@ class TankPics(Dataset):
 		return image, label
 
 
+class TestAllTankPics(Dataset):
+
+	def __init__(self, img_dir, label_map: dict=None, train=True, transform=None, target_transform=None):
+		
+		self.img_dir = img_dir
+		self.label_to_int = label_map
+		self.train = train
+		self.transform = transform
+		self.target_transform = target_transform
+
+		if not self.label_to_int:
+
+			self.label_to_int = {
+				'2s1': 0,
+				'bmp2': 1,
+				'btr70': 2,
+				'm1': 3,
+				'm2': 4,
+				'm35': 5,
+				'm60': 6,
+				'm548': 7,
+				't72': 8,
+				'zsu23': 9,
+			}
+		
+		self.file_names = []
+
+		for _, _, files in os.walk(img_dir):
+			
+			self.file_names.extend(files)
+
+	def __len__(self):
+		
+		return len(self.file_names)
+
+	def __getitem__(self, index):
+		
+		file_name = self.file_names[index]
+
+		label_str = file_name.split('_', 1)[0]
+		img_path = os.path.join(self.img_dir, label_str, file_name)
+
+		image = io.imread(img_path)
+		label = self.label_to_int[label_str]
+
+		if self.transform:
+			image = self.transform(image)
+
+		if self.target_transform:
+			label = self.target_transform(label)
+
+		return image, label
+
+
 class TankNet(nn.Module):
 
 	def __init__(self):
@@ -95,7 +149,7 @@ class TankNet(nn.Module):
 		feature_width = 128
 		mask_width = 5
 		post_conv_width = (feature_width - mask_width + 1) / 2
-		post_conv_width = (post_conv_width - mask_width + 1) / 2
+		post_conv_width = int((post_conv_width - mask_width + 1) / 2)
 
 		self.conv1 = nn.Conv2d(1, 6, mask_width)
 		self.conv2 = nn.Conv2d(6, 16, mask_width)
@@ -222,6 +276,20 @@ for epoch in range(epochs):
 	print(f'Epoch {epoch + 1}\n-------------------------------')
 	train_loop(train_dataloader, model, loss_fn, optimizer, device)
 	test_loop(test_dataloader, model, loss_fn, device)
+
+torch.save(model.state_dict(), 'TankVision_weights.pth')
+
+all_test_data = TestAllTankPics(
+	img_dir=images_root_dir,
+	label_map=label_map,
+	train=False,
+	transform=ToTensor(),
+	target_transform=target_transform,
+)
+all_test_dataloader = DataLoader(all_test_data, batch_size, shuffle=True)
+
+print('Testing over all pics!\n-------------------------------')
+test_loop(all_test_dataloader, model, loss_fn, device)
 
 # tank_feature, tank_label = tanks[0]
 

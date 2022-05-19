@@ -228,14 +228,15 @@ label_map = {
 	'zsu23': 9,
 }
 
-images_root_dir = 'qpm\\data'
+synth_root_dir = 'qpm\\data\\synth'
+real_root_dir = 'qpm\\data\\real'
 
 # Load data
 print('Loading data... ', end='')
 data_load_start = time.time()
 
 training_data = TankPics(
-	img_dir=images_root_dir,
+	img_dir=synth_root_dir,
 	label_map=label_map,
 	train=True,
 	transform=ToTensor(),
@@ -243,7 +244,7 @@ training_data = TankPics(
 )
 
 test_data = TankPics(
-	img_dir=images_root_dir,
+	img_dir=synth_root_dir,
 	label_map=label_map,
 	train=False,
 	transform=ToTensor(),
@@ -279,17 +280,17 @@ for epoch in range(epochs):
 
 torch.save(model.state_dict(), 'TankVision_weights.pth')
 
-all_test_data = TestAllTankPics(
-	img_dir=images_root_dir,
+real_test_data = TestAllTankPics(
+	img_dir=real_root_dir,
 	label_map=label_map,
 	train=False,
 	transform=ToTensor(),
 	target_transform=target_transform,
 )
-all_test_dataloader = DataLoader(all_test_data, batch_size, shuffle=True)
+real_test_dataloader = DataLoader(real_test_data, batch_size, shuffle=True)
 
 print('Testing over all pics!\n-------------------------------')
-test_loop(all_test_dataloader, model, loss_fn, device)
+test_loop(real_test_dataloader, model, loss_fn, device)
 
 # tank_feature, tank_label = tanks[0]
 
